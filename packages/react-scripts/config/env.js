@@ -48,6 +48,30 @@ dotenvFiles.forEach(dotenvFile => {
   }
 });
 
+const appDirectory = fs.realpathSync(process.cwd());
+
+/**
+ * Utility to parse PATH-like strings to array
+ *
+ * Separators:
+ * : in Unix (colon)
+ * ; in Windows (semicolon)
+ *
+ * @param {String} paths
+ * @returns {string}
+ */
+function parsePath(paths) {
+  if (paths) {
+    return paths
+      .split(path.delimiter)
+      .filter(folder => folder && !path.isAbsolute(folder))
+      .map(folder => path.resolve(appDirectory, folder))
+      .join(path.delimiter);
+  }
+
+  return '';
+}
+
 // We support resolving modules according to `NODE_PATH`.
 // This lets you use absolute paths in imports inside large monorepos:
 // https://github.com/facebookincubator/create-react-app/issues/253.
@@ -57,12 +81,14 @@ dotenvFiles.forEach(dotenvFile => {
 // Otherwise, we risk importing Node.js core modules into an app instead of Webpack shims.
 // https://github.com/facebookincubator/create-react-app/issues/1023#issuecomment-265344421
 // We also resolve them to make sure all tools using them work consistently.
-const appDirectory = fs.realpathSync(process.cwd());
-process.env.NODE_PATH = (process.env.NODE_PATH || '')
-  .split(path.delimiter)
-  .filter(folder => folder && !path.isAbsolute(folder))
-  .map(folder => path.resolve(appDirectory, folder))
-  .join(path.delimiter);
+process.env.NODE_PATH = parsePath(process.env.NODE_PATH);
+
+// node-sass supports additional paths to resolve imports from.
+// https://github.com/sass/node-sass/tree/v4.7.2#includepaths
+// It works similar to NODE_PATH, but for importing scss files.
+// We would like to assign an array to process.env variable, but
+// Node will implicitly convert value to string.
+process.env.SASS_INCLUDE_PATHS = parsePath(process.env.SASS_INCLUDE_PATHS);
 
 // Grab NODE_ENV and REACT_APP_* environment variables and prepare them to be
 // injected into the application via DefinePlugin in Webpack configuration.
@@ -87,6 +113,7 @@ function getClientEnvironment(publicUrl) {
         PUBLIC_URL: publicUrl,
       }
     );
+
   // Stringify all values so we can feed into Webpack DefinePlugin
   const stringified = {
     'process.env': Object.keys(raw).reduce((env, key) => {

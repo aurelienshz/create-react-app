@@ -264,6 +264,39 @@ module.exports = {
               },
             ],
           },
+          // "react-dev-utils/optinSassWebpackLoader" wraps sass-loader, trying to require
+          // node-sass and sass-loader, and prompting the user to install them if it fails
+          // "postcss" loader applies autoprefixer to our CSS.
+          // "css" loader resolves paths in CSS and adds assets as dependencies.
+          // "style" loader turns CSS into JS modules that inject <style> tags.
+          // In production, we use a plugin to extract that CSS to a file, but
+          // in development "style" loader enables hot editing of CSS.
+          {
+            test: /\.scss$/,
+            use: [
+              require.resolve('style-loader'),
+              {
+                loader: require.resolve('css-loader'),
+                options: {
+                  importLoaders: 2,
+                },
+              },
+              {
+                loader: require.resolve('postcss-loader'),
+                options: postCSSLoaderOptions,
+              },
+              {
+                loader: require.resolve(
+                  'react-dev-utils/optinSassWebpackLoader'
+                ),
+                options: {
+                  includePaths: process.env.SASS_INCLUDE_PATHS.split(
+                    path.delimiter
+                  ),
+                },
+              },
+            ],
+          },
           // Allows you to use two kinds of imports for SVG:
           // import logoUrl from './logo.svg'; gives you the URL.
           // import { ReactComponent as Logo } from './logo.svg'; gives you a component.
